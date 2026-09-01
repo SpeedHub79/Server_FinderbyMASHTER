@@ -8,7 +8,7 @@ local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
-local requestFunc = nil
+local requestFunc
 
 if syn and syn.request then
 	requestFunc = syn.request
@@ -20,10 +20,10 @@ elseif fluxus and fluxus.request then
 	requestFunc = fluxus.request
 elseif request then
 	requestFunc = request
-end
-
-if not requestFunc then
-	error("No supported HTTP request function found!")
+else
+	requestFunc = function()
+		return nil
+	end
 end
 
 local gameName = "Unknown"
@@ -33,25 +33,22 @@ pcall(function()
 	gameName = info.Name or "Unknown"
 end)
 
-local old = PlayerGui:FindFirstChild("LowServerFinder")
-
-if old then
-	old:Destroy()
+local oldGui = PlayerGui:FindFirstChild("LowServerFinder")
+if oldGui then
+	oldGui:Destroy()
 end
 
 local function MakeDraggable(object)
 	local dragging = false
 	local dragStart
-	local startPosition
+	local startPos
 	local dragInput
 
 	object.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1
-			or input.UserInputType == Enum.UserInputType.Touch then
-
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 			dragging = true
 			dragStart = input.Position
-			startPosition = object.Position
+			startPos = object.Position
 
 			input.Changed:Connect(function()
 				if input.UserInputState == Enum.UserInputState.End then
@@ -62,9 +59,7 @@ local function MakeDraggable(object)
 	end)
 
 	object.InputChanged:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseMovement
-			or input.UserInputType == Enum.UserInputType.Touch then
-
+		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
 			dragInput = input
 		end
 	end)
@@ -74,10 +69,10 @@ local function MakeDraggable(object)
 			local delta = input.Position - dragStart
 
 			object.Position = UDim2.new(
-				startPosition.X.Scale,
-				startPosition.X.Offset + delta.X,
-				startPosition.Y.Scale,
-				startPosition.Y.Offset + delta.Y
+				startPos.X.Scale,
+				startPos.X.Offset + delta.X,
+				startPos.Y.Scale,
+				startPos.Y.Offset + delta.Y
 			)
 		end
 	end)
@@ -90,20 +85,39 @@ Gui.IgnoreGuiInset = true
 Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 Gui.Parent = PlayerGui
 
+local LogoHolder = Instance.new("Frame")
+LogoHolder.Name = "FloatingLogo"
+LogoHolder.Parent = Gui
+LogoHolder.AnchorPoint = Vector2.new(0.5, 0)
+LogoHolder.Position = UDim2.new(0.5, 0, 0, 18)
+LogoHolder.Size = UDim2.new(0, 70, 0, 70)
+LogoHolder.BackgroundTransparency = 1
+LogoHolder.ZIndex = 100
+
+local LogoGlow = Instance.new("Frame")
+LogoGlow.Parent = LogoHolder
+LogoGlow.AnchorPoint = Vector2.new(0.5, 0.5)
+LogoGlow.Position = UDim2.new(0.5, 0, 0.5, 0)
+LogoGlow.Size = UDim2.new(1, 12, 1, 12)
+LogoGlow.BackgroundColor3 = Color3.fromRGB(125, 70, 255)
+LogoGlow.BackgroundTransparency = 0.72
+LogoGlow.BorderSizePixel = 0
+LogoGlow.ZIndex = 99
+
+local GlowCorner = Instance.new("UICorner")
+GlowCorner.CornerRadius = UDim.new(1, 0)
+GlowCorner.Parent = LogoGlow
+
 local Logo = Instance.new("TextButton")
-Logo.Parent = Gui
-Logo.Name = "FloatingLogo"
-Logo.AnchorPoint = Vector2.new(0.5, 0)
-Logo.Position = UDim2.new(0.5, 0, 0, 18)
-Logo.Size = UDim2.fromOffset(62, 62)
-Logo.BackgroundColor3 = Color3.fromRGB(38, 27, 68)
+Logo.Parent = LogoHolder
+Logo.AnchorPoint = Vector2.new(0.5, 0.5)
+Logo.Position = UDim2.new(0.5, 0, 0.5, 0)
+Logo.Size = UDim2.new(0, 60, 0, 60)
+Logo.BackgroundColor3 = Color3.fromRGB(111, 60, 215)
 Logo.BorderSizePixel = 0
 Logo.AutoButtonColor = false
-Logo.Text = "SF"
-Logo.Font = Enum.Font.GothamBlack
-Logo.TextSize = 19
-Logo.TextColor3 = Color3.fromRGB(255, 255, 255)
-Logo.ZIndex = 100
+Logo.Text = ""
+Logo.ZIndex = 101
 
 local LogoCorner = Instance.new("UICorner")
 LogoCorner.CornerRadius = UDim.new(1, 0)
@@ -111,710 +125,164 @@ LogoCorner.Parent = Logo
 
 local LogoGradient = Instance.new("UIGradient")
 LogoGradient.Color = ColorSequence.new({
-	ColorSequenceKeypoint.new(0, Color3.fromRGB(170, 75, 255)),
-	ColorSequenceKeypoint.new(0.5, Color3.fromRGB(105, 75, 235)),
-	ColorSequenceKeypoint.new(1, Color3.fromRGB(45, 65, 170))
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(210, 145, 255)),
+	ColorSequenceKeypoint.new(0.35, Color3.fromRGB(145, 75, 245)),
+	ColorSequenceKeypoint.new(0.7, Color3.fromRGB(92, 42, 190)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(55, 25, 125))
 })
 LogoGradient.Rotation = 135
 LogoGradient.Parent = Logo
 
 local LogoStroke = Instance.new("UIStroke")
-LogoStroke.Color = Color3.fromRGB(130, 115, 255)
+LogoStroke.Color = Color3.fromRGB(235, 210, 255)
 LogoStroke.Thickness = 2
+LogoStroke.Transparency = 0.05
 LogoStroke.Parent = Logo
 
+local LogoIcon = Instance.new("TextLabel")
+LogoIcon.Parent = Logo
+LogoIcon.AnchorPoint = Vector2.new(0.5, 0.5)
+LogoIcon.Position = UDim2.new(0.5, 0, 0.42, 0)
+LogoIcon.Size = UDim2.new(0, 38, 0, 30)
+LogoIcon.BackgroundTransparency = 1
+LogoIcon.Font = Enum.Font.GothamBlack
+LogoIcon.Text = "⌁"
+LogoIcon.TextColor3 = Color3.fromRGB(255, 255, 255)
+LogoIcon.TextSize = 31
+LogoIcon.ZIndex = 102
+
+local LogoText = Instance.new("TextLabel")
+LogoText.Parent = Logo
+LogoText.AnchorPoint = Vector2.new(0.5, 1)
+LogoText.Position = UDim2.new(0.5, 0, 0.92, 0)
+LogoText.Size = UDim2.new(1, 0, 0, 15)
+LogoText.BackgroundTransparency = 1
+LogoText.Font = Enum.Font.GothamBold
+LogoText.Text = "SF"
+LogoText.TextColor3 = Color3.fromRGB(255, 255, 255)
+LogoText.TextSize = 9
+LogoText.ZIndex = 102
+
 local LogoScale = Instance.new("UIScale")
-LogoScale.Parent = Logo
+LogoScale.Parent = LogoHolder
+LogoScale.Scale = 1
 
 local Main = Instance.new("Frame")
-Main.Parent = Gui
 Main.Name = "MainFrame"
+Main.Parent = Gui
 Main.AnchorPoint = Vector2.new(0.5, 0.5)
 Main.Position = UDim2.new(0.5, 0, 0.53, 0)
-Main.Size = UDim2.fromOffset(790, 515)
-Main.BackgroundColor3 = Color3.fromRGB(8, 12, 21)
+Main.Size = UDim2.new(0, 690, 0, 445)
+Main.BackgroundColor3 = Color3.fromRGB(12, 11, 18)
 Main.BorderSizePixel = 0
 Main.ZIndex = 10
 
 local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 21)
+MainCorner.CornerRadius = UDim.new(0, 22)
 MainCorner.Parent = Main
 
 local MainStroke = Instance.new("UIStroke")
-MainStroke.Color = Color3.fromRGB(73, 78, 170)
-MainStroke.Thickness = 1.5
+MainStroke.Color = Color3.fromRGB(91, 61, 145)
+MainStroke.Thickness = 1.4
+MainStroke.Transparency = 0.15
 MainStroke.Parent = Main
 
 local MainGradient = Instance.new("UIGradient")
 MainGradient.Color = ColorSequence.new({
-	ColorSequenceKeypoint.new(0, Color3.fromRGB(17, 23, 37)),
-	ColorSequenceKeypoint.new(0.45, Color3.fromRGB(9, 14, 24)),
-	ColorSequenceKeypoint.new(1, Color3.fromRGB(6, 9, 16))
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(27, 21, 39)),
+	ColorSequenceKeypoint.new(0.5, Color3.fromRGB(16, 14, 24)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(9, 9, 14))
 })
 MainGradient.Rotation = 90
 MainGradient.Parent = Main
 
-local MainScale = Instance.new("UIScale")
-MainScale.Parent = Main
-
 local Header = Instance.new("Frame")
 Header.Parent = Main
-Header.Position = UDim2.fromOffset(0, 0)
-Header.Size = UDim2.new(1, 0, 0, 102)
-Header.BackgroundColor3 = Color3.fromRGB(14, 20, 33)
+Header.Size = UDim2.new(1, 0, 0, 88)
+Header.BackgroundColor3 = Color3.fromRGB(25, 19, 37)
 Header.BorderSizePixel = 0
 Header.ZIndex = 11
 
 local HeaderCorner = Instance.new("UICorner")
-HeaderCorner.CornerRadius = UDim.new(0, 21)
+HeaderCorner.CornerRadius = UDim.new(0, 22)
 HeaderCorner.Parent = Header
 
-local HeaderFill = Instance.new("Frame")
-HeaderFill.Parent = Header
-HeaderFill.Position = UDim2.new(0, 0, 0.55, 0)
-HeaderFill.Size = UDim2.new(1, 0, 0.45, 0)
-HeaderFill.BackgroundColor3 = Color3.fromRGB(14, 20, 33)
-HeaderFill.BorderSizePixel = 0
-HeaderFill.ZIndex = 11
+local HeaderBottom = Instance.new("Frame")
+HeaderBottom.Parent = Header
+HeaderBottom.Position = UDim2.new(0, 0, 0.55, 0)
+HeaderBottom.Size = UDim2.new(1, 0, 0.45, 0)
+HeaderBottom.BackgroundColor3 = Color3.fromRGB(25, 19, 37)
+HeaderBottom.BorderSizePixel = 0
+HeaderBottom.ZIndex = 11
 
-local HeaderIcon = Instance.new("Frame")
-HeaderIcon.Parent = Header
-HeaderIcon.Position = UDim2.fromOffset(22, 15)
-HeaderIcon.Size = UDim2.fromOffset(62, 62)
-HeaderIcon.BackgroundColor3 = Color3.fromRGB(38, 47, 130)
-HeaderIcon.BorderSizePixel = 0
-HeaderIcon.ZIndex = 13
+local HeaderAccent = Instance.new("Frame")
+HeaderAccent.Parent = Header
+HeaderAccent.Position = UDim2.new(0, 0, 1, -2)
+HeaderAccent.Size = UDim2.new(1, 0, 0, 2)
+HeaderAccent.BackgroundColor3 = Color3.fromRGB(139, 77, 245)
+HeaderAccent.BorderSizePixel = 0
+HeaderAccent.ZIndex = 13
 
-local HeaderIconCorner = Instance.new("UICorner")
-HeaderIconCorner.CornerRadius = UDim.new(0, 15)
-HeaderIconCorner.Parent = HeaderIcon
+local HeaderLogo = Instance.new("Frame")
+HeaderLogo.Parent = Header
+HeaderLogo.Position = UDim2.new(0, 18, 0.5, -25)
+HeaderLogo.Size = UDim2.new(0, 50, 0, 50)
+HeaderLogo.BackgroundColor3 = Color3.fromRGB(108, 57, 205)
+HeaderLogo.BorderSizePixel = 0
+HeaderLogo.ZIndex = 12
 
-local HeaderIconGradient = Instance.new("UIGradient")
-HeaderIconGradient.Color = ColorSequence.new({
-	ColorSequenceKeypoint.new(0, Color3.fromRGB(85, 95, 255)),
-	ColorSequenceKeypoint.new(1, Color3.fromRGB(43, 46, 150))
+local HeaderLogoCorner = Instance.new("UICorner")
+HeaderLogoCorner.CornerRadius = UDim.new(0, 15)
+HeaderLogoCorner.Parent = HeaderLogo
+
+local HeaderLogoGradient = Instance.new("UIGradient")
+HeaderLogoGradient.Color = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(196, 122, 255)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(74, 34, 160))
 })
-HeaderIconGradient.Rotation = 45
-HeaderIconGradient.Parent = HeaderIcon
+HeaderLogoGradient.Rotation = 45
+HeaderLogoGradient.Parent = HeaderLogo
 
-local HeaderIconStroke = Instance.new("UIStroke")
-HeaderIconStroke.Color = Color3.fromRGB(105, 115, 255)
-HeaderIconStroke.Thickness = 1.5
-HeaderIconStroke.Parent = HeaderIcon
+local HeaderLogoIcon = Instance.new("TextLabel")
+HeaderLogoIcon.Parent = HeaderLogo
+HeaderLogoIcon.Size = UDim2.new(1, 0, 0.7, 0)
+HeaderLogoIcon.Position = UDim2.new(0, 0, 0.05, 0)
+HeaderLogoIcon.BackgroundTransparency = 1
+HeaderLogoIcon.Font = Enum.Font.GothamBlack
+HeaderLogoIcon.Text = "⌁"
+HeaderLogoIcon.TextColor3 = Color3.fromRGB(255, 255, 255)
+HeaderLogoIcon.TextSize = 24
+HeaderLogoIcon.ZIndex = 13
 
-local ServerSymbol = Instance.new("TextLabel")
-ServerSymbol.Parent = HeaderIcon
-ServerSymbol.Size = UDim2.fromScale(1, 1)
-ServerSymbol.BackgroundTransparency = 1
-ServerSymbol.Text = "☷"
-ServerSymbol.Font = Enum.Font.GothamBold
-ServerSymbol.TextSize = 40
-ServerSymbol.TextColor3 = Color3.fromRGB(235, 238, 255)
-ServerSymbol.ZIndex = 14
+local HeaderLogoText = Instance.new("TextLabel")
+HeaderLogoText.Parent = HeaderLogo
+HeaderLogoText.Size = UDim2.new(1, 0, 0, 13)
+HeaderLogoText.Position = UDim2.new(0, 0, 0.7, 0)
+HeaderLogoText.BackgroundTransparency = 1
+HeaderLogoText.Font = Enum.Font.GothamBold
+HeaderLogoText.Text = "SF"
+HeaderLogoText.TextColor3 = Color3.fromRGB(255, 255, 255)
+HeaderLogoText.TextSize = 8
+HeaderLogoText.ZIndex = 13
 
 local Title = Instance.new("TextLabel")
 Title.Parent = Header
 Title.BackgroundTransparency = 1
-Title.Position = UDim2.fromOffset(101, 18)
-Title.Size = UDim2.new(1, -220, 0, 31)
+Title.Position = UDim2.new(0, 82, 0, 14)
+Title.Size = UDim2.new(0, 400, 0, 30)
 Title.Font = Enum.Font.GothamBold
-Title.Text = "SERVER FINDER"
-Title.TextColor3 = Color3.fromRGB(245, 247, 255)
-Title.TextSize = 25
+Title.Text = "Server Finder"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 23
 Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.ZIndex = 14
+Title.ZIndex = 12
 
 local Subtitle = Instance.new("TextLabel")
 Subtitle.Parent = Header
 Subtitle.BackgroundTransparency = 1
-Subtitle.Position = UDim2.fromOffset(102, 50)
-Subtitle.Size = UDim2.new(1, -240, 0, 23)
+Subtitle.Position = UDim2.new(0, 83, 0, 45)
+Subtitle.Size = UDim2.new(0, 400, 0, 18)
 Subtitle.Font = Enum.Font.Gotham
-Subtitle.Text = "Find an available server"
-Subtitle.TextColor3 = Color3.fromRGB(145, 153, 174)
-Subtitle.TextSize = 14
-Subtitle.TextXAlignment = Enum.TextXAlignment.Left
-Subtitle.ZIndex = 14
-
-local Close = Instance.new("TextButton")
-Close.Parent = Header
-Close.AnchorPoint = Vector2.new(1, 0.5)
-Close.Position = UDim2.new(1, -20, 0.5, 0)
-Close.Size = UDim2.fromOffset(50, 50)
-Close.BackgroundColor3 = Color3.fromRGB(226, 28, 38)
-Close.BorderSizePixel = 0
-Close.AutoButtonColor = false
-Close.Text = "X"
-Close.Font = Enum.Font.GothamBold
-Close.TextSize = 19
-Close.TextColor3 = Color3.fromRGB(255, 255, 255)
-Close.ZIndex = 15
-
-local CloseCorner = Instance.new("UICorner")
-CloseCorner.CornerRadius = UDim.new(0, 13)
-CloseCorner.Parent = Close
-
-local Line = Instance.new("Frame")
-Line.Parent = Header
-Line.Position = UDim2.new(0, 20, 1, -3)
-Line.Size = UDim2.new(1, -40, 0, 3)
-Line.BackgroundColor3 = Color3.fromRGB(92, 78, 230)
-Line.BorderSizePixel = 0
-Line.ZIndex = 16
-
-local LineGradient = Instance.new("UIGradient")
-LineGradient.Color = ColorSequence.new({
-	ColorSequenceKeypoint.new(0, Color3.fromRGB(112, 74, 255)),
-	ColorSequenceKeypoint.new(0.5, Color3.fromRGB(100, 80, 255)),
-	ColorSequenceKeypoint.new(1, Color3.fromRGB(55, 100, 255))
-})
-LineGradient.Parent = Line
-
-local GameInfo = Instance.new("Frame")
-GameInfo.Parent = Main
-GameInfo.Position = UDim2.fromOffset(23, 116)
-GameInfo.Size = UDim2.new(1, -46, 0, 31)
-GameInfo.BackgroundTransparency = 1
-GameInfo.ZIndex = 12
-
-local GameName = Instance.new("TextLabel")
-GameName.Parent = GameInfo
-GameName.BackgroundTransparency = 1
-GameName.Position = UDim2.fromOffset(4, 0)
-GameName.Size = UDim2.new(0.5, 0, 1, 0)
-GameName.Font = Enum.Font.GothamBold
-GameName.Text = gameName
-GameName.TextColor3 = Color3.fromRGB(232, 235, 245)
-GameName.TextSize = 14
-GameName.TextXAlignment = Enum.TextXAlignment.Left
-GameName.ZIndex = 13
-
-local GameId = Instance.new("TextLabel")
-GameId.Parent = GameInfo
-GameId.BackgroundTransparency = 1
-GameId.Position = UDim2.new(0.5, 0, 0, 0)
-GameId.Size = UDim2.new(0.5, -4, 1, 0)
-GameId.Font = Enum.Font.Gotham
-GameId.Text = "Game ID: " .. tostring(game.PlaceId)
-GameId.TextColor3 = Color3.fromRGB(130, 139, 160)
-GameId.TextSize = 11
-GameId.TextXAlignment = Enum.TextXAlignment.Right
-GameId.ZIndex = 13
-
-local ServerList = Instance.new("ScrollingFrame")
-ServerList.Parent = Main
-ServerList.Position = UDim2.fromOffset(20, 153)
-ServerList.Size = UDim2.new(1, -40, 1, -173)
-ServerList.BackgroundColor3 = Color3.fromRGB(6, 10, 17)
-ServerList.BorderSizePixel = 0
-ServerList.CanvasSize = UDim2.new()
-ServerList.ScrollBarThickness = 7
-ServerList.ScrollBarImageColor3 = Color3.fromRGB(91, 91, 226)
-ServerList.ScrollBarImageTransparency = 0
-ServerList.Active = true
-ServerList.ZIndex = 12
-
-local ListCorner = Instance.new("UICorner")
-ListCorner.CornerRadius = UDim.new(0, 16)
-ListCorner.Parent = ServerList
-
-local ListStroke = Instance.new("UIStroke")
-ListStroke.Color = Color3.fromRGB(27, 37, 59)
-ListStroke.Thickness = 1
-ListStroke.Parent = ServerList
-
-local Padding = Instance.new("UIPadding")
-Padding.Parent = ServerList
-Padding.PaddingTop = UDim.new(0, 11)
-Padding.PaddingBottom = UDim.new(0, 11)
-Padding.PaddingLeft = UDim.new(0, 11)
-Padding.PaddingRight = UDim.new(0, 11)
-
-local Layout = Instance.new("UIListLayout")
-Layout.Parent = ServerList
-Layout.SortOrder = Enum.SortOrder.LayoutOrder
-Layout.Padding = UDim.new(0, 9)
-
-local ServerTemplate = Instance.new("Frame")
-ServerTemplate.Parent = ServerList
-ServerTemplate.Name = "ServerTemplate"
-ServerTemplate.Size = UDim2.new(1, -22, 0, 80)
-ServerTemplate.BackgroundColor3 = Color3.fromRGB(17, 25, 39)
-ServerTemplate.BorderSizePixel = 0
-ServerTemplate.Visible = false
-ServerTemplate.ZIndex = 13
-
-local ServerCorner = Instance.new("UICorner")
-ServerCorner.CornerRadius = UDim.new(0, 14)
-ServerCorner.Parent = ServerTemplate
-
-local ServerStroke = Instance.new("UIStroke")
-ServerStroke.Color = Color3.fromRGB(39, 54, 82)
-ServerStroke.Thickness = 1
-ServerStroke.Transparency = 0.1
-ServerStroke.Parent = ServerTemplate
-
-local ServerIcon = Instance.new("Frame")
-ServerIcon.Parent = ServerTemplate
-ServerIcon.Position = UDim2.new(0, 9, 0.5, -26)
-ServerIcon.Size = UDim2.fromOffset(52, 52)
-ServerIcon.BackgroundColor3 = Color3.fromRGB(27, 37, 91)
-ServerIcon.BorderSizePixel = 0
-ServerIcon.ZIndex = 14
-
-local ServerIconCorner = Instance.new("UICorner")
-ServerIconCorner.CornerRadius = UDim.new(0, 13)
-ServerIconCorner.Parent = ServerIcon
-
-local ServerIconGradient = Instance.new("UIGradient")
-ServerIconGradient.Color = ColorSequence.new({
-	ColorSequenceKeypoint.new(0, Color3.fromRGB(56, 67, 178)),
-	ColorSequenceKeypoint.new(1, Color3.fromRGB(25, 32, 84))
-})
-ServerIconGradient.Rotation = 45
-ServerIconGradient.Parent = ServerIcon
-
-local ServerIconText = Instance.new("TextLabel")
-ServerIconText.Parent = ServerIcon
-ServerIconText.Size = UDim2.fromScale(1, 1)
-ServerIconText.BackgroundTransparency = 1
-ServerIconText.Text = "☷"
-ServerIconText.Font = Enum.Font.GothamBold
-ServerIconText.TextSize = 31
-ServerIconText.TextColor3 = Color3.fromRGB(175, 185, 255)
-ServerIconText.ZIndex = 15
-
-local ServerName = Instance.new("TextLabel")
-ServerName.Parent = ServerTemplate
-ServerName.Name = "ServerName"
-ServerName.BackgroundTransparency = 1
-ServerName.Position = UDim2.fromOffset(75, 10)
-ServerName.Size = UDim2.fromOffset(145, 21)
-ServerName.Font = Enum.Font.GothamBold
-ServerName.Text = "Server"
-ServerName.TextColor3 = Color3.fromRGB(240, 242, 248)
-ServerName.TextSize = 15
-ServerName.TextXAlignment = Enum.TextXAlignment.Left
-ServerName.ZIndex = 15
-
-local Dot = Instance.new("TextLabel")
-Dot.Parent = ServerTemplate
-Dot.BackgroundTransparency = 1
-Dot.Position = UDim2.fromOffset(220, 10)
-Dot.Size = UDim2.fromOffset(20, 21)
-Dot.Text = "•"
-Dot.Font = Enum.Font.GothamBold
-Dot.TextSize = 14
-Dot.TextColor3 = Color3.fromRGB(105, 115, 140)
-Dot.ZIndex = 15
-
-local EntryGameId = Instance.new("TextLabel")
-EntryGameId.Parent = ServerTemplate
-EntryGameId.Name = "EntryGameId"
-EntryGameId.BackgroundTransparency = 1
-EntryGameId.Position = UDim2.fromOffset(237, 10)
-EntryGameId.Size = UDim2.new(0, 280, 0, 21)
-EntryGameId.Font = Enum.Font.Gotham
-EntryGameId.Text = "Game ID: N/A"
-EntryGameId.TextColor3 = Color3.fromRGB(155, 163, 182)
-EntryGameId.TextSize = 11
-EntryGameId.TextXAlignment = Enum.TextXAlignment.Left
-EntryGameId.ZIndex = 15
-
-local EntryServerId = Instance.new("TextLabel")
-EntryServerId.Parent = ServerTemplate
-EntryServerId.Name = "EntryServerId"
-EntryServerId.BackgroundTransparency = 1
-EntryServerId.Position = UDim2.fromOffset(75, 39)
-EntryServerId.Size = UDim2.new(0, 410, 0, 20)
-EntryServerId.Font = Enum.Font.Gotham
-EntryServerId.Text = "Server ID: N/A"
-EntryServerId.TextColor3 = Color3.fromRGB(155, 163, 183)
-EntryServerId.TextSize = 11
-EntryServerId.TextXAlignment = Enum.TextXAlignment.Left
-EntryServerId.ZIndex = 15
-
-local PlayerIcon = Instance.new("TextLabel")
-PlayerIcon.Parent = ServerTemplate
-PlayerIcon.BackgroundTransparency = 1
-PlayerIcon.Position = UDim2.new(1, -320, 0.5, -16)
-PlayerIcon.Size = UDim2.fromOffset(28, 32)
-PlayerIcon.Text = "♟"
-PlayerIcon.Font = Enum.Font.GothamBold
-PlayerIcon.TextSize = 21
-PlayerIcon.TextColor3 = Color3.fromRGB(207, 214, 232)
-PlayerIcon.ZIndex = 16
-
-local PlayerCount = Instance.new("TextLabel")
-PlayerCount.Parent = ServerTemplate
-PlayerCount.Name = "PlayerCount"
-PlayerCount.BackgroundTransparency = 1
-PlayerCount.Position = UDim2.new(1, -286, 0.5, -15)
-PlayerCount.Size = UDim2.fromOffset(70, 30)
-PlayerCount.Font = Enum.Font.GothamBold
-PlayerCount.Text = "0 / 7"
-PlayerCount.TextColor3 = Color3.fromRGB(255, 255, 255)
-PlayerCount.TextSize = 15
-PlayerCount.TextXAlignment = Enum.TextXAlignment.Left
-PlayerCount.ZIndex = 16
-
-local Join = Instance.new("TextButton")
-Join.Parent = ServerTemplate
-Join.Name = "Join"
-Join.AnchorPoint = Vector2.new(1, 0.5)
-Join.Position = UDim2.new(1, -10, 0.5, 0)
-Join.Size = UDim2.fromOffset(157, 52)
-Join.BackgroundColor3 = Color3.fromRGB(110, 70, 225)
-Join.BorderSizePixel = 0
-Join.AutoButtonColor = false
-Join.Text = "🚀  JOIN"
-Join.Font = Enum.Font.GothamBold
-Join.TextSize = 16
-Join.TextColor3 = Color3.fromRGB(255, 255, 255)
-Join.ZIndex = 17
-
-local JoinCorner = Instance.new("UICorner")
-JoinCorner.CornerRadius = UDim.new(0, 14)
-JoinCorner.Parent = Join
-
-local JoinGradient = Instance.new("UIGradient")
-JoinGradient.Color = ColorSequence.new({
-	ColorSequenceKeypoint.new(0, Color3.fromRGB(169, 83, 240)),
-	ColorSequenceKeypoint.new(0.5, Color3.fromRGB(116, 73, 235)),
-	ColorSequenceKeypoint.new(1, Color3.fromRGB(50, 105, 245))
-})
-JoinGradient.Parent = Join
-
-local JoinStroke = Instance.new("UIStroke")
-JoinStroke.Color = Color3.fromRGB(165, 145, 255)
-JoinStroke.Transparency = 0.45
-JoinStroke.Thickness = 1
-JoinStroke.Parent = Join
-
-local isHidden = false
-local isAnimating = false
-local isClosed = false
-
-local function OpenUI()
-	if isAnimating or isClosed then
-		return
-	end
-
-	isAnimating = true
-	isHidden = false
-
-	Main.Visible = true
-	Main.BackgroundTransparency = 1
-	MainScale.Scale = 0.88
-
-	local scaleTween = TweenService:Create(
-		MainScale,
-		TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-		{Scale = 1}
-	)
-
-	local fadeTween = TweenService:Create(
-		Main,
-		TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-		{BackgroundTransparency = 0}
-	)
-
-	scaleTween:Play()
-	fadeTween:Play()
-
-	scaleTween.Completed:Connect(function()
-		isAnimating = false
-	end)
-end
-
-local function HideUI()
-	if isAnimating or isClosed then
-		return
-	end
-
-	isAnimating = true
-	isHidden = true
-
-	local scaleTween = TweenService:Create(
-		MainScale,
-		TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.In),
-		{Scale = 0.88}
-	)
-
-	local fadeTween = TweenService:Create(
-		Main,
-		TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
-		{BackgroundTransparency = 1}
-	)
-
-	scaleTween:Play()
-	fadeTween:Play()
-
-	scaleTween.Completed:Connect(function()
-		Main.Visible = false
-		isAnimating = false
-	end)
-end
-
-Logo.MouseButton1Click:Connect(function()
-	if isClosed then
-		return
-	end
-
-	if Main.Visible and not isHidden then
-		HideUI()
-	else
-		OpenUI()
-	end
-end)
-
-Logo.MouseEnter:Connect(function()
-	TweenService:Create(
-		LogoScale,
-		TweenInfo.new(0.15),
-		{Scale = 1.1}
-	):Play()
-
-	TweenService:Create(
-		LogoStroke,
-		TweenInfo.new(0.15),
-		{
-			Thickness = 3,
-			Color = Color3.fromRGB(190, 180, 255)
-		}
-	):Play()
-end)
-
-Logo.MouseLeave:Connect(function()
-	TweenService:Create(
-		LogoScale,
-		TweenInfo.new(0.15),
-		{Scale = 1}
-	):Play()
-
-	TweenService:Create(
-		LogoStroke,
-		TweenInfo.new(0.15),
-		{
-			Thickness = 2,
-			Color = Color3.fromRGB(130, 115, 255)
-		}
-	):Play()
-end)
-
-Close.MouseEnter:Connect(function()
-	TweenService:Create(
-		Close,
-		TweenInfo.new(0.12),
-		{BackgroundColor3 = Color3.fromRGB(255, 48, 58)}
-	):Play()
-end)
-
-Close.MouseLeave:Connect(function()
-	TweenService:Create(
-		Close,
-		TweenInfo.new(0.12),
-		{BackgroundColor3 = Color3.fromRGB(226, 28, 38)}
-	):Play()
-end)
-
-Close.MouseButton1Click:Connect(function()
-	if isAnimating or isClosed then
-		return
-	end
-
-	isAnimating = true
-	isClosed = true
-
-	local tween = TweenService:Create(
-		MainScale,
-		TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.In),
-		{Scale = 0.82}
-	)
-
-	local fade = TweenService:Create(
-		Main,
-		TweenInfo.new(0.2),
-		{BackgroundTransparency = 1}
-	)
-
-	tween:Play()
-	fade:Play()
-
-	tween.Completed:Connect(function()
-		Gui:Destroy()
-	end)
-end)
-
-Join.MouseEnter:Connect(function()
-	TweenService:Create(
-		Join,
-		TweenInfo.new(0.15, Enum.EasingStyle.Quad),
-		{
-			Size = UDim2.fromOffset(162, 54)
-		}
-	):Play()
-end)
-
-Join.MouseLeave:Connect(function()
-	TweenService:Create(
-		Join,
-		TweenInfo.new(0.15, Enum.EasingStyle.Quad),
-		{
-			Size = UDim2.fromOffset(157, 52)
-		}
-	):Play()
-end)
-
-Layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-	ServerList.CanvasSize = UDim2.new(
-		0,
-		0,
-		0,
-		Layout.AbsoluteContentSize.Y + 25
-	)
-end)
-
-local function createServerEntry(serverData)
-	local clone = ServerTemplate:Clone()
-
-	clone.Name = "ServerFrameClone"
-	clone.Visible = true
-	clone.Parent = ServerList
-
-	local serverName = clone:FindFirstChild("ServerName")
-	local entryGameId = clone:FindFirstChild("EntryGameId")
-	local entryServerId = clone:FindFirstChild("EntryServerId")
-	local playerCount = clone:FindFirstChild("PlayerCount")
-	local join = clone:FindFirstChild("Join")
-
-	serverName.Text = gameName
-
-	entryGameId.Text =
-		"Game ID: " .. tostring(game.PlaceId)
-
-	entryServerId.Text =
-		"Server ID: " .. tostring(serverData.id)
-
-	playerCount.Text = string.format(
-		"%d / %d",
-		tonumber(serverData.playing) or 0,
-		tonumber(serverData.maxPlayers) or 0
-	)
-
-	join.MouseButton1Click:Connect(function()
-		pcall(function()
-			TeleportService:TeleportToPlaceInstance(
-				game.PlaceId,
-				serverData.id,
-				LocalPlayer
-			)
-		end)
-	end)
-end
-
-local function fetchServers(cursor)
-	local url = string.format(
-		"https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100",
-		game.PlaceId
-	)
-
-	if cursor then
-		url = url .. "&cursor=" .. HttpService:UrlEncode(cursor)
-	end
-
-	local success, response = pcall(function()
-		return requestFunc({
-			Url = url,
-			Method = "GET"
-		})
-	end)
-
-	if success and response and response.Body then
-		local decodeSuccess, data = pcall(function()
-			return HttpService:JSONDecode(response.Body)
-		end)
-
-		if decodeSuccess then
-			return data
-		end
-	end
-
-	return nil
-end
-
-task.spawn(function()
-	local servers = {}
-	local cursor = nil
-
-	repeat
-		local data = fetchServers(cursor)
-
-		if not data or not data.data then
-			break
-		end
-
-		for _, server in ipairs(data.data) do
-			if server.id
-				and server.playing
-				and server.maxPlayers
-				and server.playing < server.maxPlayers then
-
-				table.insert(servers, server)
-			end
-		end
-
-		cursor = data.nextPageCursor
-
-		task.wait(0.1)
-	until not cursor
-
-	table.sort(servers, function(a, b)
-		return a.playing < b.playing
-	end)
-
-	for _, server in ipairs(servers) do
-		createServerEntry(server)
-	end
-end)
-
-MakeDraggable(Main)
-MakeDraggable(Logo)
-
-task.spawn(function()
-	while Gui.Parent do
-		if not isAnimating then
-			local up = TweenService:Create(
-				LogoScale,
-				TweenInfo.new(
-					1.3,
-					Enum.EasingStyle.Sine,
-					Enum.EasingDirection.InOut
-				),
-				{Scale = 1.04}
-			)
-
-			up:Play()
-			up.Completed:Wait()
-
-			if not Gui.Parent then
-				break
-			end
-
-			local down = TweenService:Create(
-				LogoScale,
-				TweenInfo.new(
-					1.3,
-					Enum.EasingStyle.Sine,
-					Enum.EasingDirection.InOut
-				),
-				{Scale = 1}
-			)
-
-			down:Play()
-			down.Completed:Wait()
-		else
-			task.wait(0.1)
-		end
-	end
-end)
+Subtitle.Text = "Find available public servers"
+Subtitle.TextColor3 = Color3.fromRGB(157, 147, 174)
+Subtitle.TextSize =
